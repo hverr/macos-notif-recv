@@ -1,0 +1,17 @@
+# Build artifacts
+build/
+*.o
+*.app
+
+# macOS
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Temporary files
+/tmp/
+*.log
+
+# Icon generation temp files
+AppIcon.iconset/
