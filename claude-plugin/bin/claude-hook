@@ -16,6 +16,19 @@ CONFIG_FILE = Path.home() / ".macos-notif-for-claude"
 CLAUDE_SETTINGS = Path.home() / ".claude" / "settings.json"
 
 
+def load_config():
+    """Load hostname and port from config file"""
+    if CONFIG_FILE.exists():
+        with open(CONFIG_FILE, 'r') as f:
+            config = json.load(f)
+        hostname = config.get('hostname', 'localhost')
+        port = config.get('port', 9090)
+    else:
+        hostname = 'localhost'
+        port = 9090
+    return hostname, port
+
+
 def send_notification(title, message, hostname="localhost", port=9090):
     """Send a JSON-RPC notification to the server"""
     request = {
@@ -163,15 +176,8 @@ def cmd_configure(args):
 
 def cmd_test(args):
     """Send a test notification"""
-    # Load configuration
-    if CONFIG_FILE.exists():
-        with open(CONFIG_FILE, 'r') as f:
-            config = json.load(f)
-        hostname = config.get('hostname', 'localhost')
-        port = config.get('port', 9090)
-    else:
-        hostname = 'localhost'
-        port = 9090
+    hostname, port = load_config()
+    print(f"Connecting to {hostname}:{port}...")
 
     # Hardcoded test notification
     title = "Test Notification"
@@ -184,22 +190,14 @@ def cmd_test(args):
         sys.exit(0)
     else:
         print(f"✗ Failed to send notification", file=sys.stderr)
-        print(f"  Make sure the NotificationReceiver app is running", file=sys.stderr)
+        print(f"  Make sure the NotificationReceiver app is running on {hostname}:{port}", file=sys.stderr)
         print(f"  Run: open build/NotificationReceiver.app", file=sys.stderr)
         sys.exit(1)
 
 
 def cmd_run(args):
     """Run the hook (called by Claude)"""
-    # Load configuration
-    if CONFIG_FILE.exists():
-        with open(CONFIG_FILE, 'r') as f:
-            config = json.load(f)
-        hostname = config.get('hostname', 'localhost')
-        port = config.get('port', 8080)
-    else:
-        hostname = 'localhost'
-        port = 8080
+    hostname, port = load_config()
 
     # Read hook data from stdin (provided by Claude Code)
     try:
