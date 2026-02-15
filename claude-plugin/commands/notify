@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Test notification command
+# Usage: /macos-notifications:notify <title> <message>
+
+TITLE="${1:-Test Notification}"
+MESSAGE="${2:-This is a test notification from Claude Code}"
+
+PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+python3 "$PLUGIN_DIR/bin/claude-hook" test "$TITLE" "$MESSAGE"

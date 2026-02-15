@@ -1,0 +1,32 @@
+{
+  "Notification": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python3 bin/claude-hook run"
+        }
+      ]
+    }
+  ],
+  "Stop": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python3 bin/claude-hook run"
+        }
+      ]
+    }
+  ],
+  "SubagentStop": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python3 bin/claude-hook run"
+        }
+      ]
+    }
+  ]
+}

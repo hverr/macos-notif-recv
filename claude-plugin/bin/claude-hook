@@ -1,0 +1,276 @@
+#!/usr/bin/env python3
+"""
+Claude Hook Client for macOS Notifications
+Sends notifications to the macOS notification receiver via JSON-RPC
+"""
+
+import argparse
+import json
+import os
+import socket
+import sys
+from pathlib import Path
+
+
+CONFIG_FILE = Path.home() / ".macos-notif-for-claude"
+CLAUDE_SETTINGS = Path.home() / ".claude" / "settings.json"
+
+
+def send_notification(title, message, hostname="localhost", port=8080):
+    """Send a JSON-RPC notification to the server"""
+    request = {
+        "jsonrpc": "2.0",
+        "method": "notify",
+        "params": {
+            "title": title,
+            "message": message
+        },
+        "id": 1
+    }
+
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        sock.connect((hostname, port))
+        sock.sendall(json.dumps(request).encode('utf-8'))
+        response = sock.recv(4096).decode('utf-8')
+        sock.close()
+        return json.loads(response)
+    except Exception as e:
+        print(f"Failed to send notification: {e}", file=sys.stderr)
+        return None
+
+
+def cmd_install(args):
+    """Install the hook in Claude's settings.json (safely merges with existing)"""
+    script_path = Path(__file__).resolve()
+    hook_command = f"{script_path} run"
+
+    # Ensure settings directory exists
+    CLAUDE_SETTINGS.parent.mkdir(parents=True, exist_ok=True)
+
+    # Load existing settings
+    if CLAUDE_SETTINGS.exists():
+        with open(CLAUDE_SETTINGS, 'r') as f:
+            settings = json.load(f)
+    else:
+        settings = {}
+
+    # Ensure hooks section exists
+    if 'hooks' not in settings:
+        settings['hooks'] = {}
+
+    # Helper function to add hook without duplicating
+    def add_hook_to_event(event_name):
+        hook_def = {
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": hook_command
+                }
+            ]
+        }
+
+        # If event doesn't exist, create it
+        if event_name not in settings['hooks']:
+            settings['hooks'][event_name] = [hook_def]
+            return True
+
+        # Check if our hook already exists
+        for matcher_group in settings['hooks'][event_name]:
+            if 'hooks' in matcher_group:
+                for hook in matcher_group['hooks']:
+                    if hook.get('type') == 'command' and hook.get('command') == hook_command:
+                        return False  # Already exists
+
+        # Append to existing hooks for this event
+        settings['hooks'][event_name].append(hook_def)
+        return True
+
+    # Add hooks for each event
+    events_added = []
+    events_skipped = []
+
+    for event in ['Notification', 'Stop', 'SubagentStop']:
+        if add_hook_to_event(event):
+            events_added.append(event)
+        else:
+            events_skipped.append(event)
+
+    # Write back to settings
+    with open(CLAUDE_SETTINGS, 'w') as f:
+        json.dump(settings, f, indent=2)
+
+    print(f"✓ Hook installation complete!")
+    print(f"  Settings file: {CLAUDE_SETTINGS}")
+    print(f"  Hook command: {hook_command}")
+    print()
+
+    if events_added:
+        print("  Added hooks for:")
+        for event in events_added:
+            print(f"    - {event}")
+
+    if events_skipped:
+        print()
+        print("  Already installed (skipped):")
+        for event in events_skipped:
+            print(f"    - {event}")
+
+    print()
+    print("  Your existing hooks and settings have been preserved!")
+    print()
+
+
+def cmd_configure(args):
+    """Configure the JSON-RPC server hostname:port"""
+    config = {
+        "hostname": args.hostname,
+        "port": args.port
+    }
+
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(config, f, indent=2)
+
+    print(f"✓ Configured notification server: {args.hostname}:{args.port}")
+    print(f"  Config saved to: {CONFIG_FILE}")
+
+
+def cmd_test(args):
+    """Send a test notification"""
+    # Load configuration
+    if CONFIG_FILE.exists():
+        with open(CONFIG_FILE, 'r') as f:
+            config = json.load(f)
+        hostname = config.get('hostname', 'localhost')
+        port = config.get('port', 8080)
+    else:
+        hostname = 'localhost'
+        port = 8080
+
+    result = send_notification(args.title, args.message, hostname, port)
+
+    if result:
+        print(f"✓ Notification sent: {args.title}")
+        sys.exit(0)
+    else:
+        print(f"✗ Failed to send notification", file=sys.stderr)
+        sys.exit(1)
+
+
+def cmd_run(args):
+    """Run the hook (called by Claude)"""
+    # Load configuration
+    if CONFIG_FILE.exists():
+        with open(CONFIG_FILE, 'r') as f:
+            config = json.load(f)
+        hostname = config.get('hostname', 'localhost')
+        port = config.get('port', 8080)
+    else:
+        hostname = 'localhost'
+        port = 8080
+
+    # Read hook data from stdin (provided by Claude Code)
+    try:
+        hook_data = json.load(sys.stdin)
+    except:
+        hook_data = {}
+
+    hook_event = hook_data.get('hook_event_name', 'unknown')
+
+    # Determine notification based on hook event type
+    if hook_event == 'Notification':
+        title = "Claude Needs Attention"
+        message = "Claude is waiting for your input"
+    elif hook_event == 'Stop':
+        title = "Claude Finished"
+        message = "Claude has completed responding"
+    elif hook_event == 'SubagentStop':
+        title = "Agent Task Complete"
+        message = "A Claude agent has finished its task"
+    elif hook_event == 'TaskCompleted':
+        title = "Task Complete"
+        message = "Claude has marked a task as completed"
+    elif hook_event == 'SessionEnd':
+        title = "Session Ended"
+        message = "Claude session has ended"
+    else:
+        title = "Claude Event"
+        message = f"Event: {hook_event}"
+
+    # Send notification
+    result = send_notification(title, message, hostname, port)
+
+    if result:
+        # Exit 0 to allow the action to proceed
+        sys.exit(0)
+    else:
+        # Still exit 0 but log error to stderr
+        print(json.dumps({"status": "error", "message": "Failed to send notification"}), file=sys.stderr)
+        sys.exit(0)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Claude Hook Client for macOS Notifications",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+
+    # Install subcommand
+    install_parser = subparsers.add_parser(
+        'install',
+        help='Install the hook in Claude settings.json'
+    )
+    install_parser.set_defaults(func=cmd_install)
+
+    # Configure subcommand
+    configure_parser = subparsers.add_parser(
+        'configure',
+        help='Configure JSON-RPC server hostname:port'
+    )
+    configure_parser.add_argument(
+        'server',
+        help='Server in format hostname:port (e.g., localhost:8080)'
+    )
+    configure_parser.set_defaults(func=cmd_configure)
+
+    # Run subcommand (called by Claude)
+    run_parser = subparsers.add_parser(
+        'run',
+        help='Run the hook (entrypoint for Claude)'
+    )
+    run_parser.set_defaults(func=cmd_run)
+
+    # Test subcommand
+    test_parser = subparsers.add_parser(
+        'test',
+        help='Send a test notification'
+    )
+    test_parser.add_argument('title', help='Notification title')
+    test_parser.add_argument('message', help='Notification message')
+    test_parser.set_defaults(func=cmd_test)
+
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+
+    # Parse server for configure command
+    if args.command == 'configure':
+        try:
+            hostname, port = args.server.split(':')
+            args.hostname = hostname
+            args.port = int(port)
+        except ValueError:
+            print("Error: Server must be in format hostname:port", file=sys.stderr)
+            sys.exit(1)
+
+    # Execute the command
+    args.func(args)
+
+
+if __name__ == '__main__':
+    main()

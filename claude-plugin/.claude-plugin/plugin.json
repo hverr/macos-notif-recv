@@ -1,0 +1,27 @@
+{
+  "name": "macos-notifications",
+  "version": "1.0.0",
+  "description": "macOS desktop notifications for Claude Code events with custom ninja icon",
+  "author": "henri",
+  "license": "MIT",
+  "repository": "",
+  "main": "bin/claude-hook",
+  "dependencies": {
+    "python": ">=3.7"
+  },
+  "install": {
+    "steps": [
+      {
+        "description": "Configure notification server",
+        "command": "python3 bin/claude-hook configure localhost:8080"
+      },
+      {
+        "description": "Install hooks",
+        "command": "python3 bin/claude-hook install"
+      }
+    ]
+  },
+  "uninstall": {
+    "message": "To fully remove, manually delete the hooks from ~/.claude/settings.json"
+  }
+}

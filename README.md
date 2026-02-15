@@ -1,6 +1,10 @@
 # macOS Notification Receiver
 
-A native macOS menu bar application that listens for JSON-RPC requests and displays system notifications.
+A native macOS menu bar application that listens for JSON-RPC requests and displays system notifications with a custom ninja icon.
+
+Includes a **Claude Code plugin** with hooks for automatic notifications when Claude needs your attention.
+
+**📦 Plugin Documentation**: See [PLUGIN.md](PLUGIN.md) for Claude Code plugin installation and usage.
 
 ## Features
 
@@ -125,3 +129,61 @@ make clean
 ## Quitting
 
 Click the menu bar icon and select "Quit" or press Cmd+Q when the app has focus.
+
+---
+
+# Claude Hook Integration
+
+The `claude-hook` Python client integrates with Claude Code to send desktop notifications when the agent needs input or finishes tasks.
+
+## Installation
+
+### macOS App
+
+Build and run the notification receiver:
+
+```bash
+make
+make run
+```
+
+The ninja icon should appear in your menu bar.
+
+### Claude Code Plugin
+
+See [claude-plugin/README.md](claude-plugin/README.md) for plugin installation and usage.
+
+Quick setup:
+```bash
+python3 claude-plugin/bin/claude-hook configure localhost:8080
+python3 claude-plugin/bin/claude-hook install
+```
+
+## Testing
+
+Test notifications:
+
+```bash
+# Direct test
+python3 claude-plugin/bin/claude-hook test "Hello" "World"
+
+# Or use printf with nc
+printf '{"jsonrpc":"2.0","method":"notify","params":{"title":"Test","message":"Hello"},"id":1}' | nc localhost 8080
+```
+
+## Project Structure
+
+```
+mac-notif-recv/
+├── claude-plugin/          # Claude Code plugin
+│   ├── .claude-plugin/     # Plugin manifest
+│   ├── bin/                # claude-hook Python script
+│   ├── commands/           # Plugin commands
+│   ├── hooks/              # Hook definitions
+│   ├── skills/             # Plugin skills
+│   └── README.md           # Plugin documentation
+├── *.m, *.h                # Objective-C source files
+├── Makefile                # Build system
+├── Info.plist              # App configuration
+└── README.md               # This file
+```

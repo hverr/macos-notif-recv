@@ -15,3 +15,6 @@ build/
 
 # Icon generation temp files
 AppIcon.iconset/
+
+# Config files (user-specific)
+.macos-notif-for-claude
