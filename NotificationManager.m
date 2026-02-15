@@ -13,30 +13,27 @@
 
 - (instancetype)init {
     self = [super init];
-    if (self) {
-        NSUserNotificationCenter *center = [NSUserNotificationCenter defaultUserNotificationCenter];
-        center.delegate = self;
-    }
     return self;
 }
 
 - (void)displayNotificationWithTitle:(NSString *)title message:(NSString *)message {
-    NSUserNotification *notification = [[NSUserNotification alloc] init];
-    notification.title = title;
-    notification.informativeText = message;
-    notification.soundName = NSUserNotificationDefaultSoundName;
+    // Use AppleScript for more reliable notifications
+    NSString *script = [NSString stringWithFormat:
+        @"display notification \"%@\" with title \"%@\" sound name \"default\"",
+        [message stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\""],
+        [title stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\""]
+    ];
 
-    NSUserNotificationCenter *center = [NSUserNotificationCenter defaultUserNotificationCenter];
-    [center deliverNotification:notification];
+    NSAppleScript *appleScript = [[NSAppleScript alloc] initWithSource:script];
+    NSDictionary *errorDict = nil;
+    [appleScript executeAndReturnError:&errorDict];
 
-    NSLog(@"Notification displayed - Title: %@, Message: %@", title, message);
+    if (errorDict) {
+        NSLog(@"Failed to display notification: %@", errorDict);
+    } else {
+        NSLog(@"Notification displayed - Title: %@, Message: %@", title, message);
+    }
 }
 
-#pragma mark - NSUserNotificationCenterDelegate
-
-- (BOOL)userNotificationCenter:(NSUserNotificationCenter *)center
-     shouldPresentNotification:(NSUserNotification *)notification {
-    return YES;
-}
 
 @end
