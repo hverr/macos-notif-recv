@@ -41,4 +41,4 @@ run: all
 .PHONY: test
 test:
 	@echo "Sending test notification..."
-	@echo '{"jsonrpc":"2.0","method":"notify","params":{"title":"Test","message":"Hello from JSON-RPC!"},"id":1}' | nc localhost 8080
+	@printf '{"jsonrpc":"2.0","method":"notify","params":{"title":"Test","message":"Hello from JSON-RPC"},"id":1}' | nc localhost 9090

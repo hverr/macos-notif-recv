@@ -34,7 +34,7 @@
 
     self.statusMenu = [[NSMenu alloc] init];
 
-    NSMenuItem *portItem = [[NSMenuItem alloc] initWithTitle:@"Port: 8080" action:nil keyEquivalent:@""];
+    NSMenuItem *portItem = [[NSMenuItem alloc] initWithTitle:@"Port: 9090" action:nil keyEquivalent:@""];
     [portItem setEnabled:NO];
     [self.statusMenu addItem:portItem];
 
@@ -50,7 +50,7 @@
 }
 
 - (void)startServer {
-    self.rpcServer = [[JSONRPCServer alloc] initWithPort:8080];
+    self.rpcServer = [[JSONRPCServer alloc] initWithPort:9090];
 
     NSError *error = nil;
     BOOL started = [self.rpcServer start:&error];

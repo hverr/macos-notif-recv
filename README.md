@@ -155,7 +155,7 @@ See [claude-plugin/README.md](claude-plugin/README.md) for plugin installation a
 
 Quick setup:
 ```bash
-python3 claude-plugin/bin/claude-hook configure localhost:8080
+python3 claude-plugin/bin/claude-hook configure localhost:9090
 python3 claude-plugin/bin/claude-hook install
 ```
 

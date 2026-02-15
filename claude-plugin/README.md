@@ -32,19 +32,19 @@ The ninja icon should appear in your menu bar.
 
 From the project root:
 ```bash
-python3 claude-plugin/bin/claude-hook configure localhost:8080
+python3 claude-plugin/bin/claude-hook configure localhost:9090
 python3 claude-plugin/bin/claude-hook install
 ```
 
 ### 3. Test it
 
 ```bash
-python3 claude-plugin/bin/claude-hook test "Hello" "Testing notifications"
+python3 claude-plugin/bin/claude-hook test
 ```
 
 Or use the Claude Code command (after plugin installation):
 ```bash
-/macos-notifications:notify "Test Title" "Test Message"
+/macos-notifications:notify
 ```
 
 ## Installation as Plugin
@@ -92,10 +92,10 @@ bin/
 ## Commands
 
 After plugin installation:
-- `/macos-notifications:notify <title> <message>` - Send a test notification from Claude
+- `/macos-notifications:notify` - Send a test notification from Claude
 
 From command line (paths relative to project root):
-- `python3 claude-plugin/bin/claude-hook test <title> <message>` - Send notification directly
+- `python3 claude-plugin/bin/claude-hook test` - Send test notification
 - `python3 claude-plugin/bin/claude-hook configure <host>:<port>` - Configure server
 - `python3 claude-plugin/bin/claude-hook install` - Install hooks
 

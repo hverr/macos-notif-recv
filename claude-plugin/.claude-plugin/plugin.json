@@ -13,7 +13,7 @@
     "steps": [
       {
         "description": "Configure notification server",
-        "command": "python3 bin/claude-hook configure localhost:8080"
+        "command": "python3 bin/claude-hook configure localhost:9090"
       },
       {
         "description": "Install hooks",

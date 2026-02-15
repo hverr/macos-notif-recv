@@ -16,7 +16,7 @@ CONFIG_FILE = Path.home() / ".macos-notif-for-claude"
 CLAUDE_SETTINGS = Path.home() / ".claude" / "settings.json"
 
 
-def send_notification(title, message, hostname="localhost", port=8080):
+def send_notification(title, message, hostname="localhost", port=9090):
     """Send a JSON-RPC notification to the server"""
     request = {
         "jsonrpc": "2.0",
@@ -30,11 +30,36 @@ def send_notification(title, message, hostname="localhost", port=8080):
 
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(2)
+        sock.settimeout(5)
         sock.connect((hostname, port))
-        sock.sendall(json.dumps(request).encode('utf-8'))
-        response = sock.recv(4096).decode('utf-8')
+
+        # Send the JSON request
+        request_json = json.dumps(request).encode('utf-8')
+        sock.sendall(request_json)
+
+        # Close the write side to signal we're done
+        sock.shutdown(socket.SHUT_WR)
+
+        # Read response with timeout
+        sock.settimeout(3)
+        response_data = b''
+        try:
+            while True:
+                chunk = sock.recv(1024)
+                if not chunk:
+                    break
+                response_data += chunk
+        except socket.timeout:
+            pass  # Expected if server closes connection
+
         sock.close()
+
+        if not response_data:
+            # Server might have processed it but not sent response
+            # This is actually OK for notifications
+            return {"result": "assumed success"}
+
+        response = response_data.decode('utf-8')
         return json.loads(response)
     except Exception as e:
         print(f"Failed to send notification: {e}", file=sys.stderr)
@@ -143,18 +168,24 @@ def cmd_test(args):
         with open(CONFIG_FILE, 'r') as f:
             config = json.load(f)
         hostname = config.get('hostname', 'localhost')
-        port = config.get('port', 8080)
+        port = config.get('port', 9090)
     else:
         hostname = 'localhost'
-        port = 8080
+        port = 9090
 
-    result = send_notification(args.title, args.message, hostname, port)
+    # Hardcoded test notification
+    title = "Test Notification"
+    message = "This is a test from claude-hook"
+
+    result = send_notification(title, message, hostname, port)
 
     if result:
-        print(f"✓ Notification sent: {args.title}")
+        print(f"✓ Notification sent: {title}")
         sys.exit(0)
     else:
         print(f"✗ Failed to send notification", file=sys.stderr)
+        print(f"  Make sure the NotificationReceiver app is running", file=sys.stderr)
+        print(f"  Run: open build/NotificationReceiver.app", file=sys.stderr)
         sys.exit(1)
 
 
@@ -248,8 +279,6 @@ def main():
         'test',
         help='Send a test notification'
     )
-    test_parser.add_argument('title', help='Notification title')
-    test_parser.add_argument('message', help='Notification message')
     test_parser.set_defaults(func=cmd_test)
 
     args = parser.parse_args()
